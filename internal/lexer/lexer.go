@@ -32,7 +32,14 @@ const (
 
 // Creates a new Lexer.
 func New(input string) *Lexer {
-	return &Lexer{input: input}
+	return &Lexer{
+		input:        input,
+		position:     0,
+		readPosition: 0,
+		ch:           0,
+		line:         1,
+		column:       0,
+	}
 }
 
 func (l *Lexer) readChar() {
