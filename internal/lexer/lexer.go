@@ -1,5 +1,7 @@
 package lexer
 
+import "iter"
+
 type Lexer struct {
 	input        string
 	position     int
@@ -115,37 +117,43 @@ func (l *Lexer) readNumber() string {
 	return l.input[position:l.position]
 }
 
-func (l *Lexer) Token(yield func(Token) bool) {
-	l.skipWhitespace()
+func (l *Lexer) Token() iter.Seq[Token] {
+	return func(yield func(Token) bool) {
+		for {
+			l.skipWhitespace()
 
-	tok := Token{Line: l.line, Column: l.column}
+			tok := Token{Line: l.line, Column: l.column}
 
-	switch l.ch {
-	case '(':
-		tok.Type, tok.Literal = TOKEN_LPAREN, "("
-	case ')':
-		tok.Type, tok.Literal = TOKEN_RPAREN, ")"
-	case '"':
-		tok.Type, tok.Literal = TOKEN_STRING, l.readString()
-	case '\'':
-		tok.Type, tok.Literal = TOKEN_CHARACTER, l.readString()
-	case ';':
-		tok.Type, tok.Literal = TOKEN_COMMENT, l.readComment()
-	case 0:
-		tok.Type, tok.Literal = TOKEN_EOF, ""
-	default:
-		if isLetter(l.ch) {
-			tok.Type, tok.Literal = TOKEN_IDENTIFIER, l.readIdentifier()
-		} else if isDigit(l.ch) {
-			tok.Type, tok.Literal = TOKEN_NUMBER, l.readNumber()
-		} else {
-			tok.Type, tok.Literal = TOKEN_ILLEGAL, string(l.ch)
+			switch l.ch {
+			case '(':
+				tok.Type, tok.Literal = TOKEN_LPAREN, "("
+			case ')':
+				tok.Type, tok.Literal = TOKEN_RPAREN, ")"
+			case '"':
+				tok.Type, tok.Literal = TOKEN_STRING, l.readString()
+			case '\'':
+				tok.Type, tok.Literal = TOKEN_CHARACTER, l.readString()
+			case ';':
+				tok.Type, tok.Literal = TOKEN_COMMENT, l.readComment()
+			case 0:
+				tok.Type, tok.Literal = TOKEN_EOF, ""
+			default:
+				if isLetter(l.ch) {
+					tok.Type, tok.Literal = TOKEN_IDENTIFIER, l.readIdentifier()
+				} else if isDigit(l.ch) {
+					tok.Type, tok.Literal = TOKEN_NUMBER, l.readNumber()
+				} else {
+					tok.Type, tok.Literal = TOKEN_ILLEGAL, string(l.ch)
+				}
+			}
+
+			l.readChar()
+
+			if !yield(tok) || tok.Type == TOKEN_EOF {
+				break
+			}
 		}
 	}
-
-	l.readChar()
-
-	yield(tok)
 }
 
 func isLetter(ch byte) bool {
