@@ -34,7 +34,7 @@ const (
 
 // Creates a new Lexer.
 func New(input string) *Lexer {
-	return &Lexer{
+	lexer := &Lexer{
 		input:        input,
 		position:     0,
 		readPosition: 0,
@@ -42,6 +42,8 @@ func New(input string) *Lexer {
 		line:         1,
 		column:       0,
 	}
+	lexer.readChar()
+	return lexer
 }
 
 func (l *Lexer) readChar() {
