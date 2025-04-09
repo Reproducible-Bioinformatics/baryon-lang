@@ -24,6 +24,19 @@ type Program struct {
 	Implementation Implementation
 }
 
+func (p Program) String() string {
+	paramtersString := ""
+	for _, parameter := range p.Parameters {
+		paramtersString = fmt.Sprintf("%s\n%s", paramtersString, parameter)
+	}
+
+	return fmt.Sprintf(
+		"Program: %s;\nDescription: %s\nParameters: %s",
+		p.Name,
+		p.Description,
+		paramtersString)
+}
+
 // ParameterReference represents a reference to a parameter within the program.
 type ParameterReference struct {
 	NamedBaseNode
@@ -34,6 +47,10 @@ type Parameter struct {
 	NamedBaseNode
 	Constraints []any
 	Default     any
+}
+
+func (p Parameter) String() string {
+	return p.Name
 }
 
 // Implementation specifies how the program is implemented (using Docker).
