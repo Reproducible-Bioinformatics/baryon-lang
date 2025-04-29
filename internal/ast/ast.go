@@ -1,13 +1,13 @@
 package ast
 
 import (
+	"bytes"
 	"fmt"
 )
 
 // BaseNode represents the common fields for all AST nodes.
 type BaseNode struct {
 	fmt.Stringer
-	Type        string
 	Description string
 }
 
@@ -17,53 +17,98 @@ type NamedBaseNode struct {
 	Name string
 }
 
-// Program represents the root of the Abstract Syntax Tree, defining a program.
+// Program represents the root of the Abstract Syntax Tree.
 type Program struct {
 	NamedBaseNode
-	Parameters     []Parameter
-	Implementation Implementation
+	Parameters      []Parameter
+	Implementations []ImplementationBlock
+	Metadata        map[string]string
 }
 
 func (p Program) String() string {
-	paramtersString := ""
-	for _, parameter := range p.Parameters {
-		paramtersString = fmt.Sprintf("%s\n%s", paramtersString, parameter)
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("Program: %s\n", p.Name))
+	if p.Description != "" {
+		buf.WriteString(fmt.Sprintf("\tDescription: %s\n", p.Description))
+	}
+	if len(p.Metadata) > 0 {
+		buf.WriteString("\tMetadata:\n")
+		for k, v := range p.Metadata {
+			buf.WriteString(fmt.Sprintf("\t\t%s: %s\n", k, v))
+		}
+	}
+	if len(p.Parameters) > 0 {
+		buf.WriteString("\tParameters:\n")
+		for _, parameter := range p.Parameters {
+			buf.WriteString(parameter.String())
+		}
+	}
+	if len(p.Implementations) > 0 {
+		buf.WriteString("\tImplementations:\n")
+		for _, impl := range p.Implementations {
+			buf.WriteString(impl.String())
+		}
 	}
 
-	return fmt.Sprintf(
-		"Program: %s;\nDescription: %s\nParameters: %s",
-		p.Name,
-		p.Description,
-		paramtersString)
-}
-
-// ParameterReference represents a reference to a parameter within the program.
-type ParameterReference struct {
-	NamedBaseNode
+	return buf.String()
 }
 
 // Parameter defines a parameter for the program.
 type Parameter struct {
 	NamedBaseNode
-	Constraints []any
+	Type        string
+	Constraints []any // For enum type
 	Default     any
+	Metadata    map[string]string // extensible (e.g., label)
 }
 
 func (p Parameter) String() string {
-	return p.Name
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("\t\tParam: %s\n", p.Name))
+	buf.WriteString(fmt.Sprintf("\t\t\tType: %s\n", p.Type))
+	if len(p.Constraints) > 0 {
+		buf.WriteString(fmt.Sprintf("\t\t\tConstraints: %v\n", p.Constraints))
+	}
+	if p.Description != "" {
+		buf.WriteString(fmt.Sprintf("\t\t\tDescription: %s\n", p.Description))
+	}
+	if len(p.Metadata) > 0 {
+		buf.WriteString("\t\t\tMetadata:\n")
+		for k, v := range p.Metadata {
+			buf.WriteString(fmt.Sprintf("\t\t\t\t%s: %s\n", k, v))
+		}
+	}
+	return buf.String()
 }
 
-// Implementation specifies how the program is implemented (using Docker).
-type Implementation struct {
+// ImplementationBlock is a generic node for any implementation section
+type ImplementationBlock struct {
 	BaseNode
-	Image     string
-	Volumes   []Volume
-	Arguments []any
+	Name   string         // e.g., "run_docker"
+	Fields map[string]any // Holds fields like "image", "volumes", "arguments" and their values
 }
 
-// Volume defines a Docker volume mount.
-type Volume struct {
-	BaseNode
-	HostPath      string
-	ContainerPath string
+func (ib ImplementationBlock) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("\t\tBlock: %s\n", ib.Name))
+	if len(ib.Fields) > 0 {
+		buf.WriteString("\t\t\tFields:\n")
+		for k, v := range ib.Fields {
+			buf.WriteString(fmt.Sprintf("\t\t\t\t%s: %v\n", k, v))
+		}
+	}
+	return buf.String()
+}
+
+// Represents a value which could be a literal or an identifier reference
+type Value struct {
+	Literal    any    // string, number, bool, special like "_"
+	Identifier string // reference to a parameter, etc.
+}
+
+func (v Value) String() string {
+	if v.Identifier != "" {
+		return v.Identifier
+	}
+	return fmt.Sprintf("%#v", v.Literal)
 }
