@@ -83,6 +83,8 @@ func processFile(inputPath, outputPath, lang string) error {
 	case "r":
 		t = transpiler.NewRTranspiler()
 		break
+	case "python":
+		t = transpiler.NewPythonTranspiler()
 	}
 
 	code, err := t.Transpile(program)
