@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/reproducible-bioinformatics/baryon-lang/internal/ast"
+	"slices"
 )
 
 // Transpiler defines the interface for all language transpilers.
@@ -136,10 +137,5 @@ func GetParamType(name string, params []ast.Parameter) string {
 
 // Contains checks if a string is in a slice
 func Contains(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, s)
 }
