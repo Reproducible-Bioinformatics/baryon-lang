@@ -66,6 +66,7 @@ func (t *PythonTranspiler) Transpile(program *ast.Program) (string, error) {
 	}
 
 	// Add main entry point
+	t.SetIndentLevel(0)
 	t.writeEntryPoint(program)
 
 	return t.Buffer.String(), nil
