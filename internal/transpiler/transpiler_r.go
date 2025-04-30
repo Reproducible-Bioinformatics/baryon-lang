@@ -17,18 +17,22 @@ func NewRTranspiler() *RTranspiler {
 	t := &RTranspiler{}
 	t.Initialize()
 
-	// Register default implementation handlers.
 	t.RegisterImplementationHandler("run_docker", t.handleDockerImplementation)
 
-	// Register default type validators.
-	t.RegisterTypeValidator("string", t.validateStringType)
-	t.RegisterTypeValidator("number", t.validateNumberType)
-	t.RegisterTypeValidator("integer", t.validateIntegerType)
-	t.RegisterTypeValidator("character", t.validateCharacterType)
-	t.RegisterTypeValidator("boolean", t.validateBooleanType)
-	t.RegisterTypeValidator("enum", t.validateEnumType)
-	t.RegisterTypeValidator("file", t.validateFileType)
-	t.RegisterTypeValidator("directory", t.validateDirectoryType)
+	typeValidators := map[string]TypeValidator{
+		TypeString:    t.validateStringType,
+		TypeNumber:    t.validateNumberType,
+		TypeInteger:   t.validateIntegerType,
+		TypeBoolean:   t.validateBooleanType,
+		TypeEnum:      t.validateEnumType,
+		TypeFile:      t.validateFileType,
+		TypeDirectory: t.validateDirectoryType,
+		TypeCharacter: t.validateCharacterType,
+	}
+
+	for name, fn := range typeValidators {
+		t.RegisterTypeValidator(name, fn)
+	}
 
 	return t
 }
@@ -37,28 +41,22 @@ func NewRTranspiler() *RTranspiler {
 func (t *RTranspiler) Transpile(program *ast.Program) (string, error) {
 	t.Buffer.Reset()
 
-	// Generate function documentation
 	t.writeDocumentation(program)
 
-	// Generate function signature
 	t.writeSignature(program)
 
-	// Generate type validation code
 	err := t.writeTypeValidation(program.Parameters)
 	if err != nil {
 		return "", fmt.Errorf("error generating type validation: %w", err)
 	}
 
-	// Generate security checks
 	t.writeSecurityChecks(program.Parameters)
 
-	// Process implementation blocks
 	err = t.processImplementations(program)
 	if err != nil {
 		return "", fmt.Errorf("error processing implementations: %w", err)
 	}
 
-	// Close function
 	t.WriteLine("}")
 
 	return t.Buffer.String(), nil
@@ -97,6 +95,7 @@ func (t *RTranspiler) writeDocumentation(program *ast.Program) {
 		returnDesc = desc
 	}
 	t.WriteLine("#' @return %s", FormatDescription(returnDesc))
+	t.WriteLine("#'")
 	t.WriteLine("#' @export")
 }
 
@@ -129,12 +128,7 @@ func (t *RTranspiler) writeSignature(program *ast.Program) {
 		params[i] = paramDef
 	}
 
-	// Write function signature
-	if len(params) > 0 {
-		t.WriteLine("%s <- function(%s) {", program.Name, strings.Join(params, ",\n"))
-	} else {
-		t.WriteLine("%s <- function() {", program.Name)
-	}
+	t.WriteLine("%s <- function(%s) {", program.Name, strings.Join(params, ",\n"))
 	t.SetIndentLevel(t.GetIndentLevel() + 1)
 }
 
@@ -249,15 +243,6 @@ func (t *RTranspiler) validateStringType(base BaseTranspiler, param ast.Paramete
 	base.SetIndentLevel(base.GetIndentLevel() - 1)
 	base.WriteLine("}")
 
-	// Add pattern validation if specified
-	if pattern, ok := param.Metadata["pattern"]; ok {
-		base.WriteLine("if (!grepl(\"%s\", %s)) {", pattern, param.Name)
-		base.SetIndentLevel(base.GetIndentLevel() + 1)
-		base.WriteLine("stop(\"%s must match pattern '%s'\")", param.Name, pattern)
-		base.SetIndentLevel(base.GetIndentLevel() - 1)
-		base.WriteLine("}")
-	}
-
 	return nil
 }
 
@@ -268,24 +253,6 @@ func (t *RTranspiler) validateNumberType(base BaseTranspiler, param ast.Paramete
 	base.WriteLine("stop(\"%s must be a single numeric value\")", param.Name)
 	base.SetIndentLevel(base.GetIndentLevel() - 1)
 	base.WriteLine("}")
-
-	// Add range validation if specified in constraints
-	if min, ok := param.Metadata["min"]; ok {
-		base.WriteLine("if (%s < %s) {", param.Name, min)
-		base.SetIndentLevel(base.GetIndentLevel() + 1)
-		base.WriteLine("stop(\"%s must be at least %s\")", param.Name, min)
-		base.SetIndentLevel(base.GetIndentLevel() - 1)
-		base.WriteLine("}")
-	}
-
-	if max, ok := param.Metadata["max"]; ok {
-		base.WriteLine("if (%s > %s) {", param.Name, max)
-		base.SetIndentLevel(base.GetIndentLevel() + 1)
-		base.WriteLine("stop(\"%s must be at most %s\")", param.Name, max)
-		base.SetIndentLevel(base.GetIndentLevel() - 1)
-		base.WriteLine("}")
-	}
-
 	return nil
 }
 
@@ -297,24 +264,6 @@ func (t *RTranspiler) validateIntegerType(base BaseTranspiler, param ast.Paramet
 	base.WriteLine("stop(\"%s must be a single integer value\")", param.Name)
 	base.SetIndentLevel(base.GetIndentLevel() - 1)
 	base.WriteLine("}")
-
-	// Add range validation if specified in constraints
-	if min, ok := param.Metadata["min"]; ok {
-		base.WriteLine("if (%s < %s) {", param.Name, min)
-		base.SetIndentLevel(base.GetIndentLevel() + 1)
-		base.WriteLine("stop(\"%s must be at least %s\")", param.Name, min)
-		base.SetIndentLevel(base.GetIndentLevel() - 1)
-		base.WriteLine("}")
-	}
-
-	if max, ok := param.Metadata["max"]; ok {
-		base.WriteLine("if (%s > %s) {", param.Name, max)
-		base.SetIndentLevel(base.GetIndentLevel() + 1)
-		base.WriteLine("stop(\"%s must be at most %s\")", param.Name, max)
-		base.SetIndentLevel(base.GetIndentLevel() - 1)
-		base.WriteLine("}")
-	}
-
 	return nil
 }
 
@@ -326,17 +275,6 @@ func (t *RTranspiler) validateCharacterType(base BaseTranspiler, param ast.Param
 	base.WriteLine("stop(\"%s must be a single character\")", param.Name)
 	base.SetIndentLevel(base.GetIndentLevel() - 1)
 	base.WriteLine("}")
-
-	// Add allowed character set validation if specified
-	if allowed, ok := param.Metadata["allowed"]; ok {
-		base.WriteLine("allowed_chars <- strsplit(\"%s\", \"\")", allowed)
-		base.WriteLine("if (!(%s %%in%% allowed_chars[[1]])) {", param.Name)
-		base.SetIndentLevel(base.GetIndentLevel() + 1)
-		base.WriteLine("stop(\"%s must be one of these characters: %s\")", param.Name, allowed)
-		base.SetIndentLevel(base.GetIndentLevel() - 1)
-		base.WriteLine("}")
-	}
-
 	return nil
 }
 
@@ -347,7 +285,6 @@ func (t *RTranspiler) validateBooleanType(base BaseTranspiler, param ast.Paramet
 	base.WriteLine("stop(\"%s must be a single logical value (TRUE/FALSE)\")", param.Name)
 	base.SetIndentLevel(base.GetIndentLevel() - 1)
 	base.WriteLine("}")
-
 	return nil
 }
 
@@ -378,39 +315,13 @@ func (t *RTranspiler) validateEnumType(base BaseTranspiler, param ast.Parameter)
 
 // validateFileType generates validation for file parameters
 func (t *RTranspiler) validateFileType(base BaseTranspiler, param ast.Parameter) error {
-	// Basic type check
-	base.WriteLine("if (!is.character(%s) || length(%s) != 1) {", param.Name, param.Name)
-	base.SetIndentLevel(base.GetIndentLevel() + 1)
-	base.WriteLine("stop(\"%s must be a single character string (file path)\")", param.Name)
-	base.SetIndentLevel(base.GetIndentLevel() - 1)
-	base.WriteLine("}")
+	return t.validateStringType(base, param)
 
-	// File existence check is done in security checks
-
-	// Add extension validation if specified
-	if ext, ok := param.Metadata["extension"]; ok {
-		base.WriteLine("if (!grepl(\"\\\\.%s$\", tolower(%s))) {", ext, param.Name)
-		base.SetIndentLevel(base.GetIndentLevel() + 1)
-		base.WriteLine("stop(\"%s must have .%s extension\")", param.Name, ext)
-		base.SetIndentLevel(base.GetIndentLevel() - 1)
-		base.WriteLine("}")
-	}
-
-	return nil
 }
 
 // validateDirectoryType generates validation for directory parameters
 func (t *RTranspiler) validateDirectoryType(base BaseTranspiler, param ast.Parameter) error {
-	// Basic type check
-	base.WriteLine("if (!is.character(%s) || length(%s) != 1) {", param.Name, param.Name)
-	base.SetIndentLevel(base.GetIndentLevel() + 1)
-	base.WriteLine("stop(\"%s must be a single character string (directory path)\")", param.Name)
-	base.SetIndentLevel(base.GetIndentLevel() - 1)
-	base.WriteLine("}")
-
-	// Directory existence check is done in security checks
-
-	return nil
+	return t.validateStringType(base, param)
 }
 
 // handleDockerImplementation generates code for Docker-based implementations
