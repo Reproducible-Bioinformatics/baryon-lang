@@ -9,6 +9,17 @@ import (
 	"slices"
 )
 
+const (
+	TypeString    = "string"
+	TypeNumber    = "number"
+	TypeInteger   = "integer"
+	TypeBoolean   = "boolean"
+	TypeEnum      = "enum"
+	TypeFile      = "file"
+	TypeDirectory = "directory"
+	TypeCharacter = "character"
+)
+
 // Transpiler defines the interface for all language transpilers.
 type Transpiler interface {
 	// Transpile converts a Baryon program AST to target language code.
