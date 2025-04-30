@@ -57,6 +57,7 @@ func (t *RTranspiler) Transpile(program *ast.Program) (string, error) {
 		return "", fmt.Errorf("error processing implementations: %w", err)
 	}
 
+	t.SetIndentLevel(0)
 	t.WriteLine("}")
 
 	return t.Buffer.String(), nil
