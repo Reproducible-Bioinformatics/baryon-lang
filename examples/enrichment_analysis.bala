@@ -1,40 +1,34 @@
-(to_function enrichment_analysis (
-		(matrix_file string (
-			desc "path of a csv file containing the result of differential expression analysis.")
-		)
-		(species (enum ("hsapiens", "mmusculus", "dmelanogaster")) (
-			desc "the specie that is being analyzed.")
-		)
-		(source string ("source of the enrichment analysis."))
-		(separator character
-			(desc "the separator character used in the count table.")
-		)
-		(max_terms number
-			(desc "maximum number of enriched terms to display in the output plot.")
-		)
-	)
+; vi: ft=lisp
+(bala enrichment_analysis (
+    ; Parameter definitions
+    (matrix_file string
+        (desc "Path of a CSV file containing the result of differential expression analysis."))
+    (species (enum ("hsapiens" "mmusculus" "dmelanogaster"))
+        (desc "The species that is being analyzed."))
+    (parent_folder string
+        (desc "Source of the enrichment analysis."))
+    (separator character
+        (desc "The separator character used in the count table."))
+    (max_terms number
+        (desc "Maximum number of enriched terms to display in the output plot."))
 
-	(run_docker
-		(image "repbioinfo/singlecelldownstream:latest")
-		(volumes (
-				(parent-folder "/scratch")
-			)
-		)
-		(arguments (
-				"rscript /home/enrichment_analysis.r"
-				matrix_file
-				species
-				source
-				separator
-				max_terms
-			)
-		)
-	)
+    ; Implementation block
+    (run_docker
+        (image "repbioinfo/singlecelldownstream:latest")
+        (volumes
+            (parent_folder "/scratch"))
+        (arguments
+            "Rscript /home/enrichment_analysis.r"
+            matrix_file
+            species
+            source
+            separator
+            max_terms)
+    )
 
-	(desc
-	"this function processes the results of differential expression and performs
-	pathway enrichment analysis. it returns a output directory inside
-	parent_folder containing a pdf file containing a bar plot of the enriched
-	terms.")
-)
-
+    ; Program description
+    (desc
+        "This function processes the results of differential expression and performs
+        pathway enrichment analysis. It returns an output directory inside parent-folder
+        containing a PDF file with a bar plot of the enriched terms.")
+))
