@@ -7,6 +7,14 @@ import (
 	"github.com/reproducible-bioinformatics/baryon-lang/internal/ast"
 )
 
+func init() {
+	RegisterTranspiler("r", &TranspilerDescriptor{
+		Extension:   ".R",
+		Display:     "R",
+		Initializer: func() Transpiler { return NewRTranspiler() },
+	})
+}
+
 // RTranspiler converts Baryon AST to R code.
 type RTranspiler struct {
 	TranspilerBase
