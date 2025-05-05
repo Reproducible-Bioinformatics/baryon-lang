@@ -9,6 +9,26 @@ import (
 	"slices"
 )
 
+type TranspilerDescriptor struct {
+	Extension   string
+	Display     string
+	Initializer func() Transpiler
+}
+
+var transpilerRegistry map[string]*TranspilerDescriptor = map[string]*TranspilerDescriptor{}
+
+func RegisterTranspiler(lang string, t *TranspilerDescriptor) {
+	transpilerRegistry[lang] = t
+}
+
+func GetTranspiler(lang string) (*TranspilerDescriptor, error) {
+	t, exists := transpilerRegistry[lang]
+	if !exists {
+		return nil, fmt.Errorf("no transpiler registered for language '%s'", lang)
+	}
+	return t, nil
+}
+
 const (
 	TypeString    = "string"
 	TypeNumber    = "number"
