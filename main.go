@@ -13,15 +13,6 @@ import (
 	"github.com/reproducible-bioinformatics/baryon-lang/internal/transpiler"
 )
 
-// Supported language configurations
-var supportedLanguages = map[string]struct {
-	extension string
-	display   string
-}{
-	"r":      {".R", "R"},
-	"python": {".py", "Python"},
-}
-
 func main() {
 	inputFile := flag.String("input", "", "Input Baryon file (.bala)")
 	outputFile := flag.String("output", "", "Output file (default: same name with language-specific extension)")
@@ -36,14 +27,9 @@ func main() {
 
 	// Validate target language
 	targetLang := strings.ToLower(*langFlag)
-	langConfig, supported := supportedLanguages[targetLang]
-	if !supported {
-		fmt.Fprintf(os.Stderr, "Error: Unsupported language '%s'. Supported options: ", targetLang)
-		options := make([]string, 0, len(supportedLanguages))
-		for lang := range supportedLanguages {
-			options = append(options, lang)
-		}
-		fmt.Fprintln(os.Stderr, strings.Join(options, ", "))
+	currentTranspiler, err := transpiler.GetTranspiler(targetLang)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Unsupported language '%s'.", targetLang)
 		os.Exit(1)
 	}
 
@@ -52,17 +38,17 @@ func main() {
 	if outFile == "" {
 		ext := filepath.Ext(*inputFile)
 		baseFile := (*inputFile)[0 : len(*inputFile)-len(ext)]
-		outFile = baseFile + langConfig.extension
+		outFile = baseFile + currentTranspiler.Extension
 	}
 
 	// Process and transpile the file
-	if err := processFile(*inputFile, outFile, targetLang); err != nil {
+	if err := processFile(*inputFile, outFile, targetLang, currentTranspiler); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func processFile(inputPath, outputPath, lang string) error {
+func processFile(inputPath, outputPath, lang string, currentTranspiler *transpiler.TranspilerDescriptor) error {
 	fmt.Printf("Reading: %s\n", inputPath)
 	data, err := os.ReadFile(inputPath)
 	if err != nil {
@@ -75,17 +61,9 @@ func processFile(inputPath, outputPath, lang string) error {
 		return fmt.Errorf("parsing error: %w", err)
 	}
 
-	fmt.Printf("Transpiling to %s...\n", supportedLanguages[lang].display)
+	fmt.Printf("Transpiling to %s...\n", currentTranspiler.Display)
 
-	var t transpiler.Transpiler
-
-	switch strings.ToLower(lang) {
-	case "r":
-		t = transpiler.NewRTranspiler()
-		break
-	case "python":
-		t = transpiler.NewPythonTranspiler()
-	}
+	t := currentTranspiler.Initializer()
 
 	code, err := t.Transpile(program)
 	if err != nil {
