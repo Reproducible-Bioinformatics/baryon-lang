@@ -7,6 +7,14 @@ import (
 	"github.com/reproducible-bioinformatics/baryon-lang/internal/ast"
 )
 
+func init() {
+	RegisterTranspiler("python", &TranspilerDescriptor{
+		Extension:   ".py",
+		Display:     "Python 3",
+		Initializer: func() Transpiler { return NewPythonTranspiler() },
+	})
+}
+
 // PythonTranspiler converts Baryon's ast.Program to Python code.
 type PythonTranspiler struct {
 	TranspilerBase
