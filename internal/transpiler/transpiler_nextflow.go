@@ -150,7 +150,7 @@ func (n *NextflowTranspiler) handleDockerImplementation(t BaseTranspiler, impl *
 	return nil
 }
 
-func (n *NextflowTranspiler) writeWorkflow(program *ast.Program) {
+func (n *NextflowTranspiler) writeWorkflow(_ *ast.Program) {
 	n.WriteLine("workflow {")
 	n.SetIndentLevel(n.GetIndentLevel() + 1)
 	n.WriteLine("runDocker()")
