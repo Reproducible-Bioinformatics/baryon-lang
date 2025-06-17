@@ -6,6 +6,13 @@ workflows in a unified syntax and transpile them into various target languages
 and workflow engines, such as Bash, Python, R, Galaxy, Nextflow, and
 Streamflow.
 
+## Language Specification
+
+You can find the detailed language specification in the
+[SPECIFICATION.md](SPECIFICATION.md) file. It describes the syntax, semantics,
+and structure of the Baryon language, including how to define workflows,
+metadata, implementation blocks, and parameters.
+
 ## Features
 
 - **Unified Workflow DSL:** Write your workflow once, target multiple
