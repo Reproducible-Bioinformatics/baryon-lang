@@ -57,6 +57,7 @@ func (n *NextflowTranspiler) writeWorkflowHeader(program *ast.Program) {
 	n.WriteLine("")
 }
 
+// TODO: Improve parameter default value handling and quoting for Nextflow
 func (n *NextflowTranspiler) writeParameters(params []ast.Parameter) {
 	n.WriteLine("// Input Parameters")
 	for _, param := range params {

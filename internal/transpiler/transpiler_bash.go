@@ -88,6 +88,7 @@ func NewBashTranspiler() *BashTranspiler {
 	return t
 }
 
+// TODO: Implement Docker handling for Bash
 func (b *BashTranspiler) handleDockerImplementation(
 	base BaseTranspiler,
 	impl *ast.ImplementationBlock,
