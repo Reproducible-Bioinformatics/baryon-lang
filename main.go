@@ -16,7 +16,9 @@ import (
 func main() {
 	inputFile := flag.String("input", "", "Input Baryon file (.bala)")
 	outputFile := flag.String("output", "", "Output file (default: same name with language-specific extension)")
-	langFlag := flag.String("lang", "r", "Target language: r, python")
+	langFlag := flag.String("lang", "r",
+		fmt.Sprintf("Target language: %s",
+			strings.Join(transpiler.GetTranspilerNames(), ", ")))
 	flag.Parse()
 
 	if *inputFile == "" {

@@ -21,6 +21,15 @@ func RegisterTranspiler(lang string, t *TranspilerDescriptor) {
 	transpilerRegistry[lang] = t
 }
 
+// GetTranspiler retrieves a registered transpiler by language name.
+func GetTranspilerNames() []string {
+	names := make([]string, 0, len(transpilerRegistry))
+	for lang := range transpilerRegistry {
+		names = append(names, lang)
+	}
+	return names
+}
+
 func GetTranspiler(lang string) (*TranspilerDescriptor, error) {
 	t, exists := transpilerRegistry[lang]
 	if !exists {
