@@ -67,11 +67,11 @@ func (n *NextflowTranspiler) writeParameters(params []ast.Parameter) {
 
 		switch param.Type {
 		case TypeString, TypeFile, TypeDirectory:
-			n.WriteLine("params.%s = ''%s", param.Name, defaultStr)
+			n.WriteLine("params.%s = '%s'", param.Name, defaultStr)
 		case TypeNumber, TypeInteger:
-			n.WriteLine("params.%s = 0%s", param.Name, defaultStr)
+			n.WriteLine("params.%s = %s", param.Name, defaultStr)
 		case TypeBoolean:
-			n.WriteLine("params.%s = false%s", param.Name, defaultStr)
+			n.WriteLine("params.%s = s", param.Name, defaultStr)
 		case TypeEnum:
 			if len(param.Constraints) > 0 {
 				choices := make([]string, len(param.Constraints))
@@ -91,7 +91,9 @@ func (n *NextflowTranspiler) writeParameters(params []ast.Parameter) {
 
 func (n *NextflowTranspiler) processImplementations(program *ast.Program) error {
 	if len(program.Implementations) == 0 {
-		return fmt.Errorf("no implementation blocks found")
+		n.WriteLine("// No implementation blocks found")
+		n.WriteLine("throw new Exception('No implementation defined for this workflow')")
+		return nil
 	}
 
 	for _, impl := range program.Implementations {
@@ -115,7 +117,8 @@ func (n *NextflowTranspiler) handleDockerImplementation(t BaseTranspiler, impl *
 		return fmt.Errorf("Docker image not specified or invalid")
 	}
 
-	n.WriteLine("process runDocker {")
+	n.WriteLine("")
+	n.WriteLine("process %s {", impl.Name)
 	n.SetIndentLevel(n.GetIndentLevel() + 1)
 	n.WriteLine("container '%s'", image)
 
@@ -133,12 +136,14 @@ func (n *NextflowTranspiler) handleDockerImplementation(t BaseTranspiler, impl *
 	n.WriteLine("script:")
 	n.SetIndentLevel(n.GetIndentLevel() + 1)
 	n.WriteLine("def args = [")
-	for _, arg := range impl.Fields["arguments"].([]interface{}) {
-		argStr := fmt.Sprintf("%v", arg)
-		if IsParamReference(argStr, program.Parameters) {
-			n.WriteLine("params.%s,", argStr)
-		} else {
-			n.WriteLine("'%s',", argStr)
+	if args, ok := impl.Fields["arguments"].([]any); ok {
+		for _, arg := range args {
+			argStr := fmt.Sprintf("%v", arg)
+			if IsParamReference(argStr, program.Parameters) {
+				n.WriteLine("params.%s,", argStr)
+			} else {
+				n.WriteLine("'%s',", argStr)
+			}
 		}
 	}
 	n.WriteLine("].join(' ')")
@@ -150,10 +155,12 @@ func (n *NextflowTranspiler) handleDockerImplementation(t BaseTranspiler, impl *
 	return nil
 }
 
-func (n *NextflowTranspiler) writeWorkflow(_ *ast.Program) {
+func (n *NextflowTranspiler) writeWorkflow(program *ast.Program) {
 	n.WriteLine("workflow {")
 	n.SetIndentLevel(n.GetIndentLevel() + 1)
-	n.WriteLine("runDocker()")
+	for _, impl := range program.Implementations {
+		n.WriteLine("%s()", impl.Name)
+	}
 	n.SetIndentLevel(n.GetIndentLevel() - 1)
 	n.WriteLine("}")
 }
