@@ -23,6 +23,7 @@ type Program struct {
 	Parameters      []Parameter
 	Implementations []ImplementationBlock
 	Metadata        map[string]string
+	Outputs         []OutputBlock
 }
 
 func (p Program) String() string {
@@ -49,7 +50,12 @@ func (p Program) String() string {
 			buf.WriteString(impl.String())
 		}
 	}
-
+	if len(p.Outputs) > 0 {
+		buf.WriteString("\tOutputs:\n")
+		for _, output := range p.Outputs {
+			buf.WriteString(output.String())
+		}
+	}
 	return buf.String()
 }
 
@@ -111,4 +117,24 @@ func (v Value) String() string {
 		return v.Identifier
 	}
 	return fmt.Sprintf("%#v", v.Literal)
+}
+
+// OutputBlock defines an output specification for the program.
+type OutputBlock struct {
+	BaseNode
+	Format string // e.g., "json", "tsv"
+	Path   Value  // path to the output file
+}
+
+func (ob OutputBlock) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("\t\tOutput:\n")
+	if ob.Format != "" {
+		buf.WriteString(fmt.Sprintf("\t\t\tFormat: %s\n", ob.Format))
+	}
+	buf.WriteString(fmt.Sprintf("\t\t\tPath: %s\n", ob.Path.String()))
+	if ob.Description != "" {
+		buf.WriteString(fmt.Sprintf("\t\t\tDescription: %s\n", ob.Description))
+	}
+	return buf.String()
 }
