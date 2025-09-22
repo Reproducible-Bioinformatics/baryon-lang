@@ -318,12 +318,13 @@ func (p *Parser) parseImplementationBlockSExpr(node *SExpr) ast.ImplementationBl
 		if fieldNode.Children[0].Token.Type == lexer.TOKEN_IDENTIFIER {
 			fieldName := fieldNode.Children[0].Token.Literal
 
-			if fieldName == "image" || fieldName == "command" {
+			switch fieldName {
+			case "image", "command":
 				// Simple string value fields
 				if len(fieldNode.Children) > 1 && fieldNode.Children[1].Token.Type == lexer.TOKEN_STRING {
 					block.Fields[fieldName] = fieldNode.Children[1].Token.Literal
 				}
-			} else if fieldName == "volumes" {
+			case "volumes":
 				// Volumes with nested key-value pairs
 				volumes := []any{}
 
@@ -342,7 +343,7 @@ func (p *Parser) parseImplementationBlockSExpr(node *SExpr) ast.ImplementationBl
 				}
 
 				block.Fields[fieldName] = volumes
-			} else if fieldName == "arguments" {
+			case "arguments":
 				// Arguments list
 				args := []any{}
 
@@ -355,7 +356,7 @@ func (p *Parser) parseImplementationBlockSExpr(node *SExpr) ast.ImplementationBl
 				}
 
 				block.Fields[fieldName] = args
-			} else {
+			default:
 				// Generic field handling
 				if len(fieldNode.Children) > 1 {
 					block.Fields[fieldName] = fieldNode.Children[1].Token.Literal
