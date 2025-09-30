@@ -121,9 +121,9 @@ func (v Value) String() string {
 
 // OutputBlock defines an output specification for the program.
 type OutputBlock struct {
-	BaseNode
+	NamedBaseNode
 	Format string // e.g., "json", "tsv"
-	Path   Value  // path to the output file
+	Path   string // path to the output file
 }
 
 func (ob OutputBlock) String() string {
@@ -132,7 +132,7 @@ func (ob OutputBlock) String() string {
 	if ob.Format != "" {
 		buf.WriteString(fmt.Sprintf("\t\t\tFormat: %s\n", ob.Format))
 	}
-	buf.WriteString(fmt.Sprintf("\t\t\tPath: %s\n", ob.Path.String()))
+	buf.WriteString(fmt.Sprintf("\t\t\tPath: %s\n", ob.Path))
 	if ob.Description != "" {
 		buf.WriteString(fmt.Sprintf("\t\t\tDescription: %s\n", ob.Description))
 	}

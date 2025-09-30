@@ -194,6 +194,9 @@ func (p *Parser) sExprToAST(root *SExpr) (*ast.Program, error) {
 			// Implementation block
 			impl := p.parseImplementationBlockSExpr(child)
 			program.Implementations = append(program.Implementations, impl)
+		case "outputs":
+			impl := p.parseOutputsSExpr(child)
+			program.Outputs = impl
 		default:
 			// Must be a parameter definition
 			param := p.parseParameterSExpr(child)
@@ -377,4 +380,35 @@ func (p *Parser) addError(msg string) {
 
 func (p *Parser) getError() error {
 	return errors.New(strings.Join(p.errors, "\n"))
+}
+
+func (p *Parser) parseOutputsSExpr(node *SExpr) []ast.OutputBlock {
+	outputs := []ast.OutputBlock{}
+
+	for i := 1; i < len(node.Children); i++ {
+		child := node.Children[i]
+		if len(child.Children) == 0 {
+			continue // Skip empty fields
+		}
+
+		// If field has a name, process as a named field
+		if child.Children[0].Token.Type == lexer.TOKEN_IDENTIFIER {
+			output := ast.OutputBlock{
+				NamedBaseNode: ast.NamedBaseNode{
+					Name: child.Children[0].Token.Literal,
+				},
+				Format: "",
+				Path:   "",
+			}
+			if len(child.Children) > 1 && child.Children[1].Token.Type == lexer.TOKEN_STRING {
+				output.Format = child.Children[1].Token.Literal
+			}
+			if len(child.Children) > 2 && child.Children[2].Token.Type == lexer.TOKEN_STRING {
+				output.Path = child.Children[2].Token.Literal
+			}
+			outputs = append(outputs, output)
+		}
+	}
+
+	return outputs
 }
