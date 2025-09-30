@@ -122,8 +122,9 @@ func (v Value) String() string {
 // OutputBlock defines an output specification for the program.
 type OutputBlock struct {
 	NamedBaseNode
-	Format string // e.g., "json", "tsv"
-	Path   string // path to the output file
+	Format   string            // e.g., "json", "tsv"
+	Path     string            // path to the output file
+	Metadata map[string]string // extensible (e.g., label)
 }
 
 func (ob OutputBlock) String() string {

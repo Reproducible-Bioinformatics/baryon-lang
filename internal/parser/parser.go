@@ -385,27 +385,53 @@ func (p *Parser) getError() error {
 func (p *Parser) parseOutputsSExpr(node *SExpr) []ast.OutputBlock {
 	outputs := []ast.OutputBlock{}
 
-	for i := 1; i < len(node.Children); i++ {
+	for i := 0; i < len(node.Children); i++ {
 		child := node.Children[i]
 		if len(child.Children) == 0 {
 			continue // Skip empty fields
 		}
 
-		// If field has a name, process as a named field
+		// Consume the TOKEN_LPAREN, then, positionally:
+		// 0: name (string)
+		// 1: type (string, optional)
+		// 2: path (string, optional)
 		if child.Children[0].Token.Type == lexer.TOKEN_IDENTIFIER {
 			output := ast.OutputBlock{
 				NamedBaseNode: ast.NamedBaseNode{
 					Name: child.Children[0].Token.Literal,
 				},
-				Format: "",
-				Path:   "",
+				Metadata: make(map[string]string),
 			}
-			if len(child.Children) > 1 && child.Children[1].Token.Type == lexer.TOKEN_STRING {
+
+			if len(child.Children) > 1 && child.Children[1].Token.Type == lexer.TOKEN_IDENTIFIER {
 				output.Format = child.Children[1].Token.Literal
 			}
+
 			if len(child.Children) > 2 && child.Children[2].Token.Type == lexer.TOKEN_STRING {
 				output.Path = child.Children[2].Token.Literal
 			}
+
+			// Process metadata blocks
+			for j := 3; j < len(child.Children); j++ {
+				metaNode := child.Children[j]
+
+				// Check if it's a metadata block (should start with identifier)
+				if len(metaNode.Children) > 0 && metaNode.Children[0].Token.Type == lexer.TOKEN_IDENTIFIER {
+					keyword := metaNode.Children[0].Token.Literal
+
+					if keyword == "desc" && len(metaNode.Children) > 1 {
+						if metaNode.Children[1].Token.Type == lexer.TOKEN_STRING {
+							desc := metaNode.Children[1].Token.Literal
+							output.Description = desc
+							output.Metadata["desc"] = desc
+						}
+					} else if len(metaNode.Children) > 1 {
+						// Other metadata
+						output.Metadata[keyword] = metaNode.Children[1].Token.Literal
+					}
+				}
+			}
+
 			outputs = append(outputs, output)
 		}
 	}
