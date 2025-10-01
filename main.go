@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,8 @@ import (
 )
 
 func main() {
+	// When check mode is enabled, don't ask for a output file, or a target language.
+	check := flag.Bool("check", false, "Check syntax only, do not transpile")
 	inputFile := flag.String("input", "", "Input Baryon file (.bala)")
 	outputFile := flag.String("output", "", "Output file (default: same name with language-specific extension)")
 	langFlag := flag.String("lang", "r",
@@ -43,26 +46,35 @@ func main() {
 		outFile = baseFile + currentTranspiler.Extension
 	}
 
-	// Process and transpile the file
-	if err := processFile(*inputFile, outFile, targetLang, currentTranspiler); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-func processFile(inputPath, outputPath, lang string, currentTranspiler *transpiler.TranspilerDescriptor) error {
-	fmt.Printf("Reading: %s\n", inputPath)
-	data, err := os.ReadFile(inputPath)
+	fmt.Printf("Reading: %s\n", *inputFile)
+	data, err := os.ReadFile(*inputFile)
 	if err != nil {
-		return fmt.Errorf("reading file: %w", err)
+		log.Fatalf("reading file: %v", err)
 	}
 
 	fmt.Println("Parsing Baryon code...")
 	program, err := parseProgram(string(data))
 	if err != nil {
-		return fmt.Errorf("parsing error: %w", err)
+		log.Fatalf("parsing error: %v", err)
 	}
 
+	if *check {
+		fmt.Println("✅ Syntax check passed")
+		fmt.Print(program.String())
+		os.Exit(0)
+	}
+
+	// Process and transpile the file
+	if err := processFile(outFile, targetLang, currentTranspiler, program); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func processFile(outputPath, lang string,
+	currentTranspiler *transpiler.TranspilerDescriptor,
+	program *ast.Program,
+) error {
 	fmt.Printf("Transpiling to %s...\n", currentTranspiler.Display)
 
 	t := currentTranspiler.Initializer()
