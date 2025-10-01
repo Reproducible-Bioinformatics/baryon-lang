@@ -24,6 +24,9 @@ func TestParseProgram_ValidMinimal(t *testing.T) {
 				(command "echo hello")
 			)
 			(param1 string (desc "A string param"))
+			(outputs
+				(output.txt txt ./workdir/output.txt)
+			)
 		)
 	)
 	`
@@ -43,6 +46,10 @@ func TestParseProgram_ValidMinimal(t *testing.T) {
 	if len(prog.Parameters) != 1 {
 		t.Errorf("expected 1 parameter, got %d", len(prog.Parameters))
 	}
+	if len(prog.Outputs) != 1 {
+		t.Errorf("expected 1 output, got %d", len(prog.Outputs))
+	}
+	t.Logf("Parsed program: %+v", prog)
 }
 
 func TestParseProgram_Invalid_NoBala(t *testing.T) {
