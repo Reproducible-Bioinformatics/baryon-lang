@@ -31,4 +31,9 @@
         "This function processes the results of differential expression and performs
         pathway enrichment analysis. It returns an output directory inside parent-folder
         containing a PDF file with a bar plot of the enriched terms.")
+
+    ; Program outputs
+    (outputs
+          (scratch directory /scratch)
+    )
 ))
