@@ -127,9 +127,13 @@ type OutputBlock struct {
 	Metadata map[string]string // extensible (e.g., label)
 }
 
+// String provides a string representation of the OutputBlock.
 func (ob OutputBlock) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("\t\tOutput:\n")
+	if ob.Name != "" {
+		buf.WriteString(fmt.Sprintf("\t\t\tName: %s\n", ob.Name))
+	}
 	if ob.Format != "" {
 		buf.WriteString(fmt.Sprintf("\t\t\tFormat: %s\n", ob.Format))
 	}
