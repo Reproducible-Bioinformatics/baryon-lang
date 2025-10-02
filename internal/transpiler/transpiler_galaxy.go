@@ -23,14 +23,20 @@ type GalaxyTranspiler struct {
 
 // RegisterImplementationHandler implements Transpiler.
 // Subtle: this method shadows the method (TranspilerBase).RegisterImplementationHandler of GalaxyTranspiler.TranspilerBase.
-func (g *GalaxyTranspiler) RegisterImplementationHandler(name string, handler ImplementationHandler) {
-	panic("unimplemented")
+func (g *GalaxyTranspiler) RegisterImplementationHandler(
+	name string,
+	handler ImplementationHandler,
+) {
+	g.ImplHandlers[name] = handler
 }
 
 // RegisterTypeValidator implements Transpiler.
 // Subtle: this method shadows the method (TranspilerBase).RegisterTypeValidator of GalaxyTranspiler.TranspilerBase.
-func (g *GalaxyTranspiler) RegisterTypeValidator(typeName string, validator TypeValidator) {
-	panic("unimplemented")
+func (g *GalaxyTranspiler) RegisterTypeValidator(
+	typeName string,
+	validator TypeValidator,
+) {
+	g.TypeValidators[typeName] = validator
 }
 
 // Transpile implements Transpiler.
