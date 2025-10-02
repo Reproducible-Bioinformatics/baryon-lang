@@ -3,6 +3,9 @@ package transpiler
 // TODO: MOVE TO THE NEW ARCHITECTURE
 
 import (
+	"encoding/xml"
+	"fmt"
+
 	"github.com/reproducible-bioinformatics/baryon-lang/internal/ast"
 	"github.com/reproducible-bioinformatics/baryon-lang/internal/galaxy"
 )
@@ -53,8 +56,14 @@ func (g *GalaxyTranspiler) Transpile(program *ast.Program) (string, error) {
 		Outputs: &galaxy.Outputs{},
 	}
 
+	if err := g.writeTypeValidation(program.Parameters); err != nil {
+		return "", fmt.Errorf("error writing type validation: %w", err)
+	}
+
 	if len(program.Implementations) == 0 {
-		g.galaxyTool.Command = &galaxy.Command{Value: "echo 'No implementations provided'"}
+		g.galaxyTool.Command = &galaxy.Command{
+			Value: "echo 'No implementations provided'",
+		}
 	}
 
 	for _, impl := range program.Implementations {
@@ -63,7 +72,11 @@ func (g *GalaxyTranspiler) Transpile(program *ast.Program) (string, error) {
 		}
 	}
 
-	return "", nil
+	outputString, err := xml.MarshalIndent(g.galaxyTool, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("error marshaling Galaxy tool XML: %w", err)
+	}
+	return xml.Header + string(outputString), nil
 }
 
 // NewGalaxyTranspiler initializes a new Galaxy transpiler instance.
