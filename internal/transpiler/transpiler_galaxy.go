@@ -1,7 +1,5 @@
 package transpiler
 
-// TODO: MOVE TO THE NEW ARCHITECTURE
-
 import (
 	"encoding/xml"
 	"fmt"
@@ -22,6 +20,10 @@ func init() {
 type GalaxyTranspiler struct {
 	TranspilerBase
 	galaxyTool *galaxy.Tool
+}
+
+func (g *GalaxyTranspiler) RegisterImplementationHandler(s string, param any) {
+	panic("unimplemented")
 }
 
 // RegisterImplementationHandler implements Transpiler.
@@ -84,7 +86,32 @@ func NewGalaxyTranspiler() *GalaxyTranspiler {
 	t := &GalaxyTranspiler{}
 	t.Initialize()
 
+	t.RegisterImplementationHandler("run_docker", t.handleDockerImplementation)
+	t.RegisterImplementationHandler("run_singularity", t.handleSingularityImplementation)
+
+	t.RegisterTypeValidator("string", t.validateStringType)
+
 	return t
+}
+
+// writeTypeValidation generates type validation code for parameters.
+func (g *GalaxyTranspiler) writeTypeValidation(params []ast.Parameter) error {
+	if len(params) == 0 {
+		return nil
+	}
+	for _, param := range params {
+		if param.Default != nil {
+			continue
+		}
+		validator, exists := g.GetTypeValidators()[param.Type]
+		if !exists {
+			return fmt.Errorf("no validator registered for type '%s'", param.Type)
+		}
+		if err := validator(g, param); err != nil {
+			return fmt.Errorf("error validating parameter '%s': %w", param.Name, err)
+		}
+	}
+	return nil
 }
 
 func (g *GalaxyTranspiler) validateStringType(_ BaseTranspiler, param ast.Parameter) error {
