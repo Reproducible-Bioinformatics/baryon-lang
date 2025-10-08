@@ -22,28 +22,6 @@ type GalaxyTranspiler struct {
 	galaxyTool *galaxy.Tool
 }
 
-func (g *GalaxyTranspiler) RegisterImplementationHandler(s string, param any) {
-	panic("unimplemented")
-}
-
-// RegisterImplementationHandler implements Transpiler.
-// Subtle: this method shadows the method (TranspilerBase).RegisterImplementationHandler of GalaxyTranspiler.TranspilerBase.
-func (g *GalaxyTranspiler) RegisterImplementationHandler(
-	name string,
-	handler ImplementationHandler,
-) {
-	g.ImplHandlers[name] = handler
-}
-
-// RegisterTypeValidator implements Transpiler.
-// Subtle: this method shadows the method (TranspilerBase).RegisterTypeValidator of GalaxyTranspiler.TranspilerBase.
-func (g *GalaxyTranspiler) RegisterTypeValidator(
-	typeName string,
-	validator TypeValidator,
-) {
-	g.TypeValidators[typeName] = validator
-}
-
 // Transpile implements Transpiler.
 func (g *GalaxyTranspiler) Transpile(program *ast.Program) (string, error) {
 
@@ -86,10 +64,18 @@ func NewGalaxyTranspiler() *GalaxyTranspiler {
 	t := &GalaxyTranspiler{}
 	t.Initialize()
 
-	t.RegisterImplementationHandler("run_docker", t.handleDockerImplementation)
-	t.RegisterImplementationHandler("run_singularity", t.handleSingularityImplementation)
+	// t.RegisterImplementationHandler("run_docker", t.handleDockerImplementation)
+	// t.RegisterImplementationHandler("run_singularity", t.handleSingularityImplementation)
 
-	t.RegisterTypeValidator("string", t.validateStringType)
+	// Register type validators
+	// https://docs.galaxyproject.org/en/latest/dev/schema.html#tool-inputs-param
+	galaxyTypeValidators := []string{"text", "integer", "float", "boolean",
+		"genomebuild", "select", "color", "data_column", "hidden",
+		"hidden_data", "baseurl", "file", "ftpfile", "data", "data_collection",
+		"drill_down"}
+	for _, gt := range galaxyTypeValidators {
+		t.RegisterTypeValidator(gt, t.validateGenericType(gt))
+	}
 
 	return t
 }
@@ -114,13 +100,15 @@ func (g *GalaxyTranspiler) writeTypeValidation(params []ast.Parameter) error {
 	return nil
 }
 
-func (g *GalaxyTranspiler) validateStringType(_ BaseTranspiler, param ast.Parameter) error {
-	g.galaxyTool.Inputs.Param = append(g.galaxyTool.Inputs.Param, galaxy.Param{
-		Type:            "text",
-		Name:            param.Name,
-		Value:           param.Default.(string),
-		Label:           param.Description,
-		RefreshOnChange: false,
-	})
-	return nil
+func (g *GalaxyTranspiler) validateGenericType(paramType string) func(BaseTranspiler, ast.Parameter) error {
+	return func(_ BaseTranspiler, param ast.Parameter) error {
+		g.galaxyTool.Inputs.Param = append(g.galaxyTool.Inputs.Param, galaxy.Param{
+			Type:            paramType,
+			Name:            param.Name,
+			Value:           fmt.Sprintf("%v", param.Default),
+			Label:           param.Description,
+			RefreshOnChange: false,
+		})
+		return nil
+	}
 }
