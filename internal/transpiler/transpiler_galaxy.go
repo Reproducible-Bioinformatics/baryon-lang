@@ -68,11 +68,6 @@ func NewGalaxyTranspiler() *GalaxyTranspiler {
 	// t.RegisterImplementationHandler("run_singularity", t.handleSingularityImplementation)
 
 	// Register type validators
-	// https://docs.galaxyproject.org/en/latest/dev/schema.html#tool-inputs-param
-	galaxyTypeValidators := []string{"text", "integer", "float", "boolean",
-		"genomebuild", "select", "color", "data_column", "hidden",
-		"hidden_data", "baseurl", "file", "ftpfile", "data", "data_collection",
-		"drill_down"}
 	for _, gt := range galaxyTypeValidators {
 		t.RegisterTypeValidator(gt, t.validateGenericType(gt))
 	}
