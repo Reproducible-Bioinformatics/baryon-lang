@@ -22,7 +22,7 @@ const (
 	GalaxyTypeValidatorDrillDown      GalaxyTypeValidator = "drill_down"
 )
 
-var galaxyTypeValidators = [...]GalaxyTypeValidator{
+var galaxyTypeValidators = []GalaxyTypeValidator{
 	GalaxyTypeValidatorText,
 	GalaxyTypeValidatorInteger,
 	GalaxyTypeValidatorFloat,

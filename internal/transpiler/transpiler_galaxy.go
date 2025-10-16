@@ -69,7 +69,7 @@ func NewGalaxyTranspiler() *GalaxyTranspiler {
 
 	// Register type validators
 	for _, gt := range galaxyTypeValidators {
-		t.RegisterTypeValidator(gt, t.validateGenericType(gt))
+		t.RegisterTypeValidator(string(gt), t.validateGenericType(gt))
 	}
 
 	return t
@@ -95,10 +95,10 @@ func (g *GalaxyTranspiler) writeTypeValidation(params []ast.Parameter) error {
 	return nil
 }
 
-func (g *GalaxyTranspiler) validateGenericType(paramType string) func(BaseTranspiler, ast.Parameter) error {
+func (g *GalaxyTranspiler) validateGenericType(paramType GalaxyTypeValidator) func(BaseTranspiler, ast.Parameter) error {
 	return func(_ BaseTranspiler, param ast.Parameter) error {
 		g.galaxyTool.Inputs.Param = append(g.galaxyTool.Inputs.Param, galaxy.Param{
-			Type:            paramType,
+			Type:            string(paramType),
 			Name:            param.Name,
 			Value:           fmt.Sprintf("%v", param.Default),
 			Label:           param.Description,
