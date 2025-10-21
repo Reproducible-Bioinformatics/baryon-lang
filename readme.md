@@ -66,6 +66,8 @@ Contributions are welcome! Please open issues or submit pull requests.
 
 [MIT](LICENSE)
 
+---
+
 ## Tutorial
 
 This documentation will guide you through the concepts, structure, and tooling
@@ -73,7 +75,7 @@ of **baryon-lang**, a language for defining reproducible bioinformatics
 workflows. The tutorial is based on actual code and examples from the
 [baryon-lang
 repository](https://github.com/Reproducible-Bioinformatics/baryon-lang), with a
-focus on clarity, correctness, and practical insights.
+focus on practical insights.
 
 ---
 
@@ -93,6 +95,8 @@ You can now use the CLI to check or transpile baryon files:
 
 ```sh
 ./baryon-lang -input examples/enrichment_analysis.bala -lang r
+
+./baryon-lang -input another_program.bala -lang galaxy
 ```
 
 You can also get the latest version of baryon-lang from the GitHub releases
@@ -116,11 +120,17 @@ construct is wrapped in parentheses. Here's the opening of a typical file:
 ```
 
 Key S-expression elements:
-- **Program node**: `(bala program_name (...))`
-- **Parameters**: `(param_name type (desc "..."))`
-- **Implementation blocks**: e.g., `(run_docker ...)`
-- **Descriptions**: `(desc "...")`
-- **Outputs**: `(outputs ...)`
+- **Program node**: `(bala program_name (...))` This will be the name of the
+program that will be transpiled. 
+- **Parameters**: `(param_name type (desc "..."))` This contains the list of
+parameters for you contained function.
+- **Implementation blocks**: e.g., `(run_docker ...)` This expressess the core
+of your function that will be run inside a Docker container. It will specify
+how to interact with the parameters in docker.
+- **Descriptions**: `(desc "...")` provides human-readable documentation for
+the program or parameters.
+- **Outputs**: `(outputs ...)` specifies expected outputs, their types, and
+locations.
 
 ---
 
@@ -203,8 +213,7 @@ Before transpiling, always check your baryon file for syntax errors:
 ```
 
 The tool will print a summary or detailed error messages (including
-line/column), thanks to its robust lexer/parser (`internal/lexer` and
-`internal/parser`).
+line/column).
 
 ---
 
