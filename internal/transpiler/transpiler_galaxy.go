@@ -72,6 +72,22 @@ func NewGalaxyTranspiler() *GalaxyTranspiler {
 		t.RegisterTypeValidator(string(gt), t.validateGenericType(gt))
 	}
 
+	typeValidatorAlias := map[string]GalaxyTypeValidator{
+		TypeString:    GalaxyTypeValidatorText,
+		TypeCharacter: GalaxyTypeValidatorText,
+		TypeNumber:    GalaxyTypeValidatorFloat,
+		TypeInteger:   GalaxyTypeValidatorInteger,
+		TypeBoolean:   GalaxyTypeValidatorBoolean,
+		TypeFile:      GalaxyTypeValidatorFile,
+		TypeDirectory: GalaxyTypeValidatorDataCollection,
+	}
+
+	for alias, gt := range typeValidatorAlias {
+		t.RegisterTypeValidator(alias, t.validateGenericType(gt))
+	}
+
+	t.RegisterTypeValidator(TypeEnum, t.validateEnumType)
+
 	return t
 }
 
@@ -106,4 +122,32 @@ func (g *GalaxyTranspiler) validateGenericType(paramType GalaxyTypeValidator) fu
 		})
 		return nil
 	}
+}
+
+func (g *GalaxyTranspiler) validateEnumType(_ BaseTranspiler, param ast.Parameter) error {
+	if len(param.Constraints) == 0 {
+		return fmt.Errorf("enum type '%s' must have at least one constraint", param.Name)
+	}
+
+	opts := []galaxy.Option{}
+	for _, opt := range param.Constraints {
+		optString, ok := opt.(string)
+		if !ok {
+			continue
+		}
+		opts = append(opts, galaxy.Option{
+			Value:         optString,
+			CanonicalName: optString,
+		})
+	}
+
+	g.galaxyTool.Inputs.Param = append(g.galaxyTool.Inputs.Param, galaxy.Param{
+		Type:    string(GalaxyTypeValidatorSelect),
+		Name:    param.Name,
+		Label:   param.Description,
+		Options: opts,
+		Value:   opts[0].Value, // Default to first option
+	})
+
+	return nil
 }
