@@ -282,3 +282,5 @@ source:
   transpilers).
 - Use the parser’s error messages for debugging (they report line/column
   precisely).
+## 13. LLM support 
+Using the prompt within the file named prompt.txt, users can get help from LLM to generate a scratch version of a bala file based on their script. The bala file needs to be checked and verified by the user. 
