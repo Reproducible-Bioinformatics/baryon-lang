@@ -383,7 +383,7 @@ func (t *RTranspiler) handleDockerImplementation(base BaseTranspiler, impl *ast.
 		base.WriteLine("volumes = list(")
 		base.SetIndentLevel(base.GetIndentLevel() + 1)
 
-		for _, vol := range volumes {
+		for index, vol := range volumes {
 			switch v := vol.(type) {
 			case []any:
 				if len(v) >= 2 {
@@ -391,13 +391,19 @@ func (t *RTranspiler) handleDockerImplementation(base BaseTranspiler, impl *ast.
 					src := fmt.Sprintf("%v", v[0])
 					dst := fmt.Sprintf("%v", v[1])
 
+					isIndexLast := index == len(volumes)-1
+					comma := ""
+					if !isIndexLast {
+						comma = ","
+					}
+
 					// Check if src is a parameter reference
 					if IsParamReference(src, program.Parameters) {
-						base.WriteLine("c(%s_dir, \"%s\"),", src, dst)
+						base.WriteLine("c(%s_dir, \"%s\")%s", src, dst, comma)
 					} else if src == "parent-folder" || src == "parent_folder" {
-						base.WriteLine("c(main_mount_dir, \"%s\"),", dst)
+						base.WriteLine("c(main_mount_dir, \"%s\")%s", dst, comma)
 					} else {
-						base.WriteLine("c(\"%s\", \"%s\"),", src, dst)
+						base.WriteLine("c(\"%s\", \"%s\")%s", src, dst, comma)
 					}
 				}
 			}
