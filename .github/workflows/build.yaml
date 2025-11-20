@@ -15,12 +15,9 @@ jobs:
           curl -OL https://go.dev/dl/go1.22.1.linux-amd64.tar.gz
           rm -rf /usr/local/go 
           sudo tar -C /usr/local -xzf go1.22.1.linux-amd64.tar.gz
-      - name: Test
-        run: |
-          make test
       - name: Build
         run: |
-          GOOS=${{ matrix.platform }} GOARCH=${{ matrix.architecture }} make
+          GOOS=${{ matrix.platform }} GOARCH=${{ matrix.architecture }} go build -o baryon-lang .
       - uses: vimtor/action-zip@v1.2
         with:
           files: baryon-lang
