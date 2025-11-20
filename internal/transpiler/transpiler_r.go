@@ -375,7 +375,7 @@ func (t *RTranspiler) handleDockerImplementation(base BaseTranspiler, impl *ast.
 	base.SetIndentLevel(base.GetIndentLevel() + 1)
 
 	// Generate Docker run command
-	base.WriteLine("result <- rrundocker::run_in_docker(")
+	base.WriteLine("result <- run_in_docker(")
 	base.SetIndentLevel(base.GetIndentLevel() + 1)
 	base.WriteLine("image_name = \"%s\",", image)
 
