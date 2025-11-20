@@ -64,7 +64,7 @@ func NewGalaxyTranspiler() *GalaxyTranspiler {
 	t := &GalaxyTranspiler{}
 	t.Initialize()
 
-	// t.RegisterImplementationHandler("run_docker", t.handleDockerImplementation)
+	t.RegisterImplementationHandler("run_docker", t.handleDockerImplementation)
 	// t.RegisterImplementationHandler("run_singularity", t.handleSingularityImplementation)
 
 	// Register type validators
@@ -149,5 +149,64 @@ func (g *GalaxyTranspiler) validateEnumType(_ BaseTranspiler, param ast.Paramete
 		Value:   opts[0].Value, // Default to first option
 	})
 
+	return nil
+}
+
+func (g *GalaxyTranspiler) handleDockerImplementation(
+	t BaseTranspiler,
+	impl *ast.ImplementationBlock,
+	program *ast.Program) error {
+	image, ok := impl.Fields["image"].(string)
+	if !ok || image == "" {
+		return fmt.Errorf("docker implementation requires 'image' option")
+	}
+
+	volumeMapping := []galaxy.VolumeMapping{}
+
+	volumes, ok := impl.Fields["volumes"].([]any)
+	if ok {
+		for _, vol := range volumes {
+			switch v := vol.(type) {
+			case []any:
+				if len(v) >= 2 {
+					hostPath, ok1 := v[0].(string)
+					containerPath, ok2 := v[1].(string)
+					if ok1 && ok2 {
+						volumeMapping = append(volumeMapping, galaxy.VolumeMapping{
+							HostPath:  hostPath,
+							GuestPath: containerPath,
+						})
+					}
+				}
+			}
+		}
+	}
+
+	// Handle arguments
+	args, ok := impl.Fields["arguments"].([]any)
+	if ok && len(args) > 0 {
+		for _, arg := range args {
+			argStr, ok := arg.(string)
+			if ok {
+				if g.galaxyTool.Command == nil {
+					g.galaxyTool.Command = &galaxy.Command{
+						Value: "",
+					}
+				}
+				if g.galaxyTool.Command.Value != "" {
+					g.galaxyTool.Command.Value += " "
+				}
+				g.galaxyTool.Command.Value += argStr
+			}
+		}
+	}
+
+	g.galaxyTool.Requirements.Container = []galaxy.Container{
+		{
+			Type:    "docker",
+			Value:   image,
+			Volumes: volumeMapping,
+		},
+	}
 	return nil
 }
