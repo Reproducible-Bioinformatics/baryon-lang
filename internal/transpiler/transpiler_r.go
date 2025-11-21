@@ -197,7 +197,7 @@ func (t *RTranspiler) writeSecurityChecks(params []ast.Parameter) {
 		if param.Type == "file" {
 			t.WriteLine("")
 			t.WriteLine("# Check if file exists")
-			t.WriteLine("if (!rrundocker::is_running_in_docker()) {")
+			t.WriteLine("if (!is_running_in_docker()) {")
 			t.SetIndentLevel(t.GetIndentLevel() + 1)
 			t.WriteLine("if (!file.exists(%s)) {", param.Name)
 			t.SetIndentLevel(t.GetIndentLevel() + 1)
@@ -209,7 +209,7 @@ func (t *RTranspiler) writeSecurityChecks(params []ast.Parameter) {
 		} else if param.Type == "directory" {
 			t.WriteLine("")
 			t.WriteLine("# Check if directory exists")
-			t.WriteLine("if (!rrundocker::is_running_in_docker()) {")
+			t.WriteLine("if (!is_running_in_docker()) {")
 			t.SetIndentLevel(t.GetIndentLevel() + 1)
 			t.WriteLine("if (!dir.exists(%s)) {", param.Name)
 			t.SetIndentLevel(t.GetIndentLevel() + 1)
