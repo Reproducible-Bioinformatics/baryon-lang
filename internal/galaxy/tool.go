@@ -234,8 +234,17 @@ func (p Param) Validate() error {
 //
 // https://docs.galaxyproject.org/en/master/dev/schema.html#tool-outputs
 type Outputs struct {
-	XMLName xml.Name `xml:"outputs"`
-	Data    []Data
+	XMLName    xml.Name   `xml:"outputs"`
+	Data       []Data
+	Collection []Collection `xml:"collection,omitempty"`
+}
+
+// https://docs.galaxyproject.org/en/master/dev/schema.html#tool-outputs-collection
+type Collection struct {
+	XMLName xml.Name `xml:"collection"`
+	Name    string   `xml:"name,attr"`
+	Type    string   `xml:"type,attr"` // e.g., "list", "paired", "list:paired"
+	Data    []Data   `xml:"data,omitempty"`
 }
 
 // This tag set is contained within the <outputs> tag set, and it defines the
