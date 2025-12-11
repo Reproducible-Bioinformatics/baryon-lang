@@ -1,39 +1,16 @@
 ; vi: ft=lisp
-(bala enrichment_analysis (
-    ; Parameter definitions
-    (matrix_file string
-        (desc "Path of a CSV file containing the result of differential expression analysis."))
-    (species (enum ("hsapiens" "mmusculus" "dmelanogaster"))
-        (desc "The species that is being analyzed."))
-    (parent_folder string
-        (desc "Source of the enrichment analysis."))
-    (separator character
-        (desc "The separator character used in the count table."))
-    (max_terms number
-        (desc "Maximum number of enriched terms to display in the output plot."))
+(bala sixteenS (
+  (input_directory directory (desc "Path to input directory containing fastq files"))
 
-    ; Implementation block
-    (run_docker
-        (image "repbioinfo/singlecelldownstream:latest")
-        (volumes
-            (parent_folder "/scratch"))
-        (arguments
-            "Rscript /home/enrichment_analysis.r"
-            matrix_file
-            species
-            source
-            separator
-            max_terms)
-    )
+  (desc "Pipeline for the analysis of 16S rRNA gene sequencing data")
 
-    ; Program description
-    (desc
-        "This function processes the results of differential expression and performs
-        pathway enrichment analysis. It returns an output directory inside parent-folder
-        containing a PDF file with a bar plot of the enriched terms.")
+  (run_docker
+      (image "repbioinfo/qiime2023")
+      (volumes (input_directory "/scratch"))
+      (arguments "/home/qiime_full.sh"))
+  (outputs
+      (aligned_results directory "/aligned_results"
+          (desc "Output directory containing analysis results")))
+)
+)
 
-    ; Program outputs
-    (outputs
-          (scratch directory /scratch)
-    )
-))
