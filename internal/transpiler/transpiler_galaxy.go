@@ -3,6 +3,7 @@ package transpiler
 import (
 	"encoding/xml"
 	"fmt"
+	"strings"
 
 	"github.com/reproducible-bioinformatics/baryon-lang/internal/ast"
 	"github.com/reproducible-bioinformatics/baryon-lang/internal/galaxy"
@@ -38,6 +39,10 @@ func (g *GalaxyTranspiler) Transpile(program *ast.Program) (string, error) {
 
 	if err := g.writeTypeValidation(program.Parameters); err != nil {
 		return "", fmt.Errorf("error writing type validation: %w", err)
+	}
+
+	if err := g.writeOutputDefinitions(program.Outputs); err != nil {
+		return "", fmt.Errorf("error writing output definitions: %w", err)
 	}
 
 	if len(program.Implementations) == 0 {
@@ -91,6 +96,15 @@ func NewGalaxyTranspiler() *GalaxyTranspiler {
 	return t
 }
 
+// These constants represent the types of outputs that can be generated in Galaxy.
+// Data is for single files, DataCollection is for collections of files.
+type GalaxyOutputType string
+
+const (
+	GalaxyOutputTypeData           GalaxyOutputType = "data"
+	GalaxyOutputTypeDataCollection GalaxyOutputType = "collection"
+)
+
 // writeTypeValidation generates type validation code for parameters.
 func (g *GalaxyTranspiler) writeTypeValidation(params []ast.Parameter) error {
 	if len(params) == 0 {
@@ -106,6 +120,35 @@ func (g *GalaxyTranspiler) writeTypeValidation(params []ast.Parameter) error {
 		}
 		if err := validator(g, param); err != nil {
 			return fmt.Errorf("error validating parameter '%s': %w", param.Name, err)
+		}
+	}
+	return nil
+}
+
+// writeOutputDefinitions generates output definitions for the Galaxy tool.
+func (g *GalaxyTranspiler) writeOutputDefinitions(outputs []ast.OutputBlock) error {
+	if len(outputs) == 0 {
+		return nil
+	}
+	for _, output := range outputs {
+		if output.Format == "directory" {
+			g.galaxyTool.Outputs.Collection = append(g.galaxyTool.Outputs.Collection, galaxy.Collection{
+				Name: output.Name,
+				Type: "list", // Assuming "list" for now, as Baryon doesn't specify collection type
+				Data: []galaxy.Data{
+					{
+						Name:   output.Name, // Use the output name for the data element inside the collection
+						Format: "auto",      // Galaxy often uses 'auto' for collection elements
+						Label:  output.Description,
+					},
+				},
+			})
+		} else {
+			g.galaxyTool.Outputs.Data = append(g.galaxyTool.Outputs.Data, galaxy.Data{
+				Name:   output.Name,
+				Format: output.Format,
+				Label:  output.Description,
+			})
 		}
 	}
 	return nil
@@ -161,33 +204,14 @@ func (g *GalaxyTranspiler) handleDockerImplementation(
 		return fmt.Errorf("docker implementation requires 'image' option")
 	}
 
-	volumeMapping := []galaxy.VolumeMapping{}
-
-	volumes, ok := impl.Fields["volumes"].([]any)
-	if ok {
-		for _, vol := range volumes {
-			switch v := vol.(type) {
-			case []any:
-				if len(v) >= 2 {
-					hostPath, ok1 := v[0].(string)
-					containerPath, ok2 := v[1].(string)
-					if ok1 && ok2 {
-						volumeMapping = append(volumeMapping, galaxy.VolumeMapping{
-							HostPath:  hostPath,
-							GuestPath: containerPath,
-						})
-					}
-				}
-			}
-		}
-	}
-
 	// Handle arguments
 	args, ok := impl.Fields["arguments"].([]any)
 	if ok && len(args) > 0 {
 		for _, arg := range args {
 			argStr, ok := arg.(string)
 			if ok {
+				// Format the argument to include Galaxy parameter references
+				formattedArg := formatGalaxyArgument(argStr, program.Parameters)
 				if g.galaxyTool.Command == nil {
 					g.galaxyTool.Command = &galaxy.Command{
 						Value: "",
@@ -196,17 +220,36 @@ func (g *GalaxyTranspiler) handleDockerImplementation(
 				if g.galaxyTool.Command.Value != "" {
 					g.galaxyTool.Command.Value += " "
 				}
-				g.galaxyTool.Command.Value += argStr
+				g.galaxyTool.Command.Value += formattedArg
 			}
 		}
 	}
 
 	g.galaxyTool.Requirements.Container = []galaxy.Container{
 		{
-			Type:    "docker",
-			Value:   image,
-			Volumes: volumeMapping,
+			Type:  "docker",
+			Value: image,
 		},
 	}
 	return nil
+}
+
+// formatGalaxyArgument checks if the given string is a Baryon parameter name
+// and formats it into a Galaxy-compatible argument.
+func formatGalaxyArgument(arg string, params []ast.Parameter) string {
+	for _, param := range params {
+		if param.Name == arg {
+			// For file and directory types, Galaxy often uses .path or .name attributes
+			// For simplicity, we start with $param_name. For directories, use .path
+			if param.Type == TypeFile || param.Type == TypeDirectory {
+				return fmt.Sprintf("$%s.path", param.Name)
+			}
+			return fmt.Sprintf("$%s", param.Name)
+		}
+	}
+	// If it's not a parameter, and contains spaces, wrap in single quotes for basic shell safety
+	if strings.ContainsAny(arg, " \t\n\r") {
+		return fmt.Sprintf("'%s'", arg)
+	}
+	return arg
 }
