@@ -137,7 +137,6 @@ type Container struct {
 	XMLName xml.Name `xml:"container"`
 	Type    string   `xml:"type,attr"`
 	Value   string   `xml:",chardata"`
-	Volumes []VolumeMapping
 }
 
 // Implements Validable.
@@ -235,7 +234,7 @@ func (p Param) Validate() error {
 // https://docs.galaxyproject.org/en/master/dev/schema.html#tool-outputs
 type Outputs struct {
 	XMLName    xml.Name   `xml:"outputs"`
-	Data       []Data
+	Data       []Data     `xml:"data,omitempty"`
 	Collection []Collection `xml:"collection,omitempty"`
 }
 
@@ -272,9 +271,4 @@ func (d Data) Validate() error {
 	return nil
 }
 
-// TODO: Integrate this with galaxy
-//   - research tool volume mapping.
-type VolumeMapping struct {
-	HostPath  string
-	GuestPath string
-}
+
