@@ -181,11 +181,32 @@ type Param struct {
 	Name            string   `xml:"name,omitempty,attr"`
 	Value           string   `xml:"value,omitempty,attr"`
 	Options         []Option `xml:"option"`
+	OptionsTag      *Options `xml:"options"`
 	Argument        string   `xml:"argument,omitempty"`
 	Label           string   `xml:"label,omitempty"`
 	Help            string   `xml:"help,omitempty"`
 	Optional        bool     `xml:"optional,omitempty"`
 	RefreshOnChange bool     `xml:"refresh_on_change,omitempty"`
+}
+
+// https://docs.galaxyproject.org/en/latest/dev/schema.html#tool-inputs-param-options
+type Options struct {
+	XMLName       xml.Name `xml:"options"`
+	FromDataTable string   `xml:"from_data_table,attr"`
+	Columns       []Column `xml:"column"`
+	Filter        []Filter `xml:"filter"`
+}
+
+type Column struct {
+	XMLName xml.Name `xml:"column"`
+	Name    string   `xml:"name,attr"`
+	Index   int      `xml:"index,attr"`
+}
+
+type Filter struct {
+	XMLName xml.Name `xml:"filter"`
+	Type    string   `xml:"type,attr"`
+	Column  int      `xml:"column,attr"`
 }
 
 // https://docs.galaxyproject.org/en/latest/dev/schema.html#tool-inputs-param-option
