@@ -114,6 +114,15 @@ func (g *GalaxyTranspiler) writeTypeValidation(params []ast.Parameter) error {
 		if param.Default != nil {
 			continue
 		}
+
+		// Check for Galaxy Data Table metadata
+		if tableName, ok := param.Metadata["galaxy_data_table"]; ok {
+			if err := g.createDataTableParam(param, tableName); err != nil {
+				return fmt.Errorf("error creating data table param '%s': %w", param.Name, err)
+			}
+			continue
+		}
+
 		validator, exists := g.GetTypeValidators()[param.Type]
 		if !exists {
 			return fmt.Errorf("no validator registered for type '%s'", param.Type)
@@ -122,6 +131,28 @@ func (g *GalaxyTranspiler) writeTypeValidation(params []ast.Parameter) error {
 			return fmt.Errorf("error validating parameter '%s': %w", param.Name, err)
 		}
 	}
+	return nil
+}
+
+func (g *GalaxyTranspiler) createDataTableParam(param ast.Parameter, tableName string) error {
+	options := &galaxy.Options{
+		FromDataTable: tableName,
+		Columns: []galaxy.Column{
+			{Name: "name", Index: 1},
+			{Name: "value", Index: 0},
+			{Name: "path", Index: 2},
+		},
+		Filter: []galaxy.Filter{
+			{Type: "sort_by", Column: 1},
+		},
+	}
+
+	g.galaxyTool.Inputs.Param = append(g.galaxyTool.Inputs.Param, galaxy.Param{
+		Type:       "select",
+		Name:       param.Name,
+		Label:      param.Description,
+		OptionsTag: options,
+	})
 	return nil
 }
 
@@ -239,6 +270,11 @@ func (g *GalaxyTranspiler) handleDockerImplementation(
 func formatGalaxyArgument(arg string, params []ast.Parameter) string {
 	for _, param := range params {
 		if param.Name == arg {
+			// Check for Data Table metadata
+			if _, ok := param.Metadata["galaxy_data_table"]; ok {
+				return fmt.Sprintf("$%s.fields.path", param.Name)
+			}
+
 			// For file and directory types, Galaxy often uses .path or .name attributes
 			// For simplicity, we start with $param_name. For directories, use .path
 			if param.Type == TypeFile || param.Type == TypeDirectory {
