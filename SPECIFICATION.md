@@ -47,7 +47,34 @@ blocks, and parameter definitions.
 - The `(desc <string>)` form SHOULD be used to provide a program description.
 - Additional metadata MAY be specified as `(key value)` pairs.
 
-### Implementation Blocks
+### Metadata Support
+
+Parameters can include optional metadata key-value pairs to support transpiler-specific features without affecting the core logic of other backends.
+
+### Galaxy Data Tables
+
+To integrate with Galaxy's Data Tables (for selecting reference genomes, indices, etc.), use the `galaxy_data_table` metadata key.
+
+- **Key**: `"galaxy_data_table"`
+- **Value**: The name of the data table (e.g., `"fasta_indexes"`, `"bowtie2_indexes"`).
+
+**Example:**
+
+```lisp
+(parameter "reference_genome"
+    (type "file")
+    (description "Select reference genome")
+    (metadata 
+        ("galaxy_data_table" "fasta_indexes")
+    )
+)
+```
+
+**Behavior:**
+- **Galaxy**: Renders a select box populated from the specified data table. The argument passed to the tool will be the path from the selected row (specifically `${param_name}.fields.path`).
+- **Other Backends**: Treated as a standard file parameter (path string).
+
+## Implementation Blocks
 
 - Implementation blocks define workflow execution details.
 - At least one implementation block SHOULD be present.
