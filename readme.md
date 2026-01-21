@@ -44,7 +44,7 @@ go build -o baryon-lang main.go
 Transpile a workflow file to a target language:
 
 ```sh
-./baryon-lang -in examples/enrichment_analysis.bala -target python
+./baryon-lang -input examples/enrichment_analysis.bala -target python
 ```
 
 Supported targets: `bash`, `python`, `r`, `galaxy`, `nextflow`, `streamflow`
