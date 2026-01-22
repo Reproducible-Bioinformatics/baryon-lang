@@ -70,10 +70,16 @@ func (b *BashTranspiler) writeUtilityFunctions() {
 	b.WriteLine("")
 	b.WriteLine("run_docker() {")
 	b.SetIndentLevel(b.GetIndentLevel() + 1)
-	b.WriteLine("local image=\"$1\"")
-	b.WriteLine("shift")
+	b.WriteLine("local image=\"$1\"; shift")
+	b.WriteLine("local opts=()")
+	b.WriteLine("while [[ $# -gt 0 && \"$1\" != \"--\" ]]; do")
+	b.SetIndentLevel(b.GetIndentLevel() + 1)
+	b.WriteLine("opts+=(\"$1\"); shift")
+	b.SetIndentLevel(b.GetIndentLevel() - 1)
+	b.WriteLine("done")
+	b.WriteLine("[[ \"$1\" == \"--\" ]] && shift")
 	b.WriteLine("log_info \"Running Docker image: $image\"")
-	b.WriteLine("docker run --rm \"$@\" \"$image\"")
+	b.WriteLine("docker run --rm \"${opts[@]}\" \"$image\" \"$@\"")
 	b.SetIndentLevel(b.GetIndentLevel() - 1)
 	b.WriteLine("}")
 	b.WriteLine("")
@@ -221,91 +227,80 @@ func (b *BashTranspiler) handleDockerImplementation(
 	base.WriteLine("")
 	base.WriteLine("check_docker")
 	base.WriteLine("")
-	base.WriteLine("# Run Docker container")
-	
-	// Prepare arguments for run_docker function
-	var dockerArgs strings.Builder
-
-	// Environment variables
-	if envs, ok := impl.Fields["env"].([]any); ok {
-		for _, e := range envs {
-			pair, ok := e.([]any)
-			if !ok || len(pair) != 2 {
-				continue
-			}
-			key := pair[0].(string)
-			val := pair[1].(string)
-			if IsParamReference(val, program.Parameters) {
-				dockerArgs.WriteString(fmt.Sprintf(" -e %s=\"$%s\"", key, val))
-			} else {
-				dockerArgs.WriteString(fmt.Sprintf(" -e %s=\"%s\"", key, val))
-			}
-		}
-	}
-
-	// Volumes
-	if vols, ok := impl.Fields["volumes"].([]any); ok && len(vols) > 0 {
-		for _, v := range vols {
-			pair, ok := v.([]any)
-			if !ok || len(pair) != 2 {
-				continue
-			}
-			hostPath := pair[0].(string)
-			containerPath := pair[1].(string)
-
-			if IsParamReference(hostPath, program.Parameters) {
-				// Use the _dir variable for file parameters to mount the directory
-				if Contains(fileParams, hostPath) {
-					dockerArgs.WriteString(fmt.Sprintf(" -v \"$%s_dir\":%s", hostPath, containerPath))
-				} else {
-					dockerArgs.WriteString(fmt.Sprintf(" -v \"$%s\":%s", hostPath, containerPath))
+		base.WriteLine("# Run Docker container")
+		
+		base.WriteLine("docker_opts=()")
+		// Environment variables
+		if envs, ok := impl.Fields["env"].([]any); ok {
+			for _, e := range envs {
+				pair, ok := e.([]any)
+				if !ok || len(pair) != 2 {
+					continue
 				}
-			} else if hostPath == "parent-folder" || hostPath == "parent_folder" {
-				// Fallback or specific logic for parent folder if needed
-				// For now assuming it refers to current working dir or similar
-				dockerArgs.WriteString(fmt.Sprintf(" -v \"$(pwd)\":%s", containerPath))
-			} else {
-				dockerArgs.WriteString(fmt.Sprintf(" -v \"%s\":%s", hostPath, containerPath))
+				key := pair[0].(string)
+				val := pair[1].(string)
+				if IsParamReference(val, program.Parameters) {
+					base.WriteLine("docker_opts+=(-e \"%s=$%s\")", key, val)
+				} else {
+					base.WriteLine("docker_opts+=(-e \"%s=%s\")", key, val)
+				}
 			}
 		}
-	} else {
-		// Default volume mapping if none specified
-		// Mount the directory of the first file parameter, or current directory
-		if len(fileParams) > 0 {
-			dockerArgs.WriteString(fmt.Sprintf(" -v \"$%s_dir\":/data", fileParams[0]))
+	
+		// Volumes
+		if vols, ok := impl.Fields["volumes"].([]any); ok && len(vols) > 0 {
+			for _, v := range vols {
+				pair, ok := v.([]any)
+				if !ok || len(pair) != 2 {
+					continue
+				}
+				hostPath := pair[0].(string)
+				containerPath := pair[1].(string)
+	
+				if IsParamReference(hostPath, program.Parameters) {
+					// Use the _dir variable for file parameters to mount the directory
+					if Contains(fileParams, hostPath) {
+						base.WriteLine("docker_opts+=(-v \"$%s_dir:%s\")", hostPath, containerPath)
+					} else {
+						base.WriteLine("docker_opts+=(-v \"$%s:%s\")", hostPath, containerPath)
+					}
+				} else if hostPath == "parent-folder" || hostPath == "parent_folder" {
+					base.WriteLine("docker_opts+=(-v \"$(pwd):%s\")", containerPath)
+				} else {
+					base.WriteLine("docker_opts+=(-v \"%s:%s\")", hostPath, containerPath)
+				}
+			}
 		} else {
-			dockerArgs.WriteString(" -v \"$(pwd)\":/data")
-		}
-	}
-
-	// Image is passed as the last argument to run_docker, followed by container args
-	
-	// Arguments passed TO the container
-	var containerArgs strings.Builder
-	if args, ok := impl.Fields["arguments"].([]any); ok {
-		for _, a := range args {
-			argStr, ok := a.(string)
-			if !ok {
-				continue
-			}
-			if IsParamReference(argStr, program.Parameters) {
-				// If it's a file parameter, pass the filename (since we mounted the dir)
-				if Contains(fileParams, argStr) {
-					containerArgs.WriteString(fmt.Sprintf(" \"$%s_filename\"", argStr))
-				} else {
-					containerArgs.WriteString(fmt.Sprintf(" \"$%s\"", argStr))
-				}
+			if len(fileParams) > 0 {
+				base.WriteLine("docker_opts+=(-v \"$%s_dir:/data\")", fileParams[0])
 			} else {
-				containerArgs.WriteString(fmt.Sprintf(" \"%s\"", argStr))
+				base.WriteLine("docker_opts+=(-v \"$(pwd):/data\")")
 			}
 		}
+	
+		base.WriteLine("container_args=()")
+		if args, ok := impl.Fields["arguments"].([]any); ok {
+			for _, a := range args {
+				argStr, ok := a.(string)
+				if !ok {
+					continue
+				}
+				if IsParamReference(argStr, program.Parameters) {
+					if Contains(fileParams, argStr) {
+						base.WriteLine("container_args+=(\"$%s_filename\")", argStr)
+					} else {
+						base.WriteLine("container_args+=(\"$%s\")", argStr)
+					}
+				} else {
+					base.WriteLine("container_args+=(\"%s\")", argStr)
+				}
+			}
+		}
+	
+		base.WriteLine("run_docker \"%s\" \"${docker_opts[@]}\" -- \"${container_args[@]}\"", image)
+		return nil
 	}
-
-	base.WriteLine("run_docker \"%s\" %s %s", image, dockerArgs.String(), containerArgs.String())
-	return nil
-}
-
-func (b *BashTranspiler) validateStringType(
+	func (b *BashTranspiler) validateStringType(
 	base BaseTranspiler,
 	param ast.Parameter,
 ) error {
