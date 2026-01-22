@@ -29,6 +29,24 @@ func (b *BashTranspiler) Transpile(program *ast.Program) (string, error) {
 		return "", fmt.Errorf("error writing type validation: %w", err)
 	}
 
+	for _, impl := range program.Implementations {
+		handler, ok := b.GetImplementationHandlers()[impl.Name]
+		if !ok {
+			return "", fmt.Errorf("unknown implementation block: %s", impl.Name)
+		}
+		if err := handler(b, &impl, program); err != nil {
+			return "", fmt.Errorf("error processing implementation '%s': %w", impl.Name, err)
+		}
+	}
+
+	if len(program.Outputs) > 0 {
+		b.WriteLine("")
+		b.WriteLine("# Outputs")
+		for _, output := range program.Outputs {
+			b.WriteLine("echo \"Output generated: %s\"", output.Path)
+		}
+	}
+
 	return b.Buffer.String(), nil
 }
 
@@ -94,6 +112,53 @@ func (b *BashTranspiler) handleDockerImplementation(
 	impl *ast.ImplementationBlock,
 	program *ast.Program,
 ) error {
+	image, ok := impl.Fields["image"].(string)
+	if !ok {
+		return fmt.Errorf("image field is required and must be a string")
+	}
+
+	base.WriteLine("")
+	base.WriteLine("# Run Docker container")
+
+	// Build command
+	var cmdBuilder strings.Builder
+	cmdBuilder.WriteString("docker run --rm")
+
+	// Volumes
+	if vols, ok := impl.Fields["volumes"].([]any); ok {
+		for _, v := range vols {
+			pair, ok := v.([]any)
+			if !ok || len(pair) != 2 {
+				continue
+			}
+			hostPath := pair[0].(string)
+			containerPath := pair[1].(string)
+
+			if IsParamReference(hostPath, program.Parameters) {
+				hostPath = fmt.Sprintf("\"$%s\"", hostPath)
+			}
+
+			cmdBuilder.WriteString(fmt.Sprintf(" -v %s:%s", hostPath, containerPath))
+		}
+	}
+
+	cmdBuilder.WriteString(" " + image)
+
+	// Arguments
+	if args, ok := impl.Fields["arguments"].([]any); ok {
+		for _, a := range args {
+			argStr, ok := a.(string)
+			if !ok {
+				continue
+			}
+			if IsParamReference(argStr, program.Parameters) {
+				argStr = fmt.Sprintf("\"$%s\"", argStr)
+			}
+			cmdBuilder.WriteString(" " + argStr)
+		}
+	}
+
+	base.WriteLine(cmdBuilder.String())
 	return nil
 }
 
